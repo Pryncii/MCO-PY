@@ -1,14 +1,80 @@
 import tkinter as tk
 from tkinter import scrolledtext
+import re
+import socket
+from socket import *
+
+global clientSocket
+global server_address
 
 
 def connect_to_server():
-    command = f"/join"
-    output_text.insert(tk.END, f"Sending command: {command}\n")
+    input = send_entry.get()
+    pattern = r'^/join (\d+\.\d+\.\d+\.\d+) (\d+)$'
+    match = re.match(pattern, input)
+    if match:
+        ip_address, port = match.groups()
+        port = int(port)
+        print(ip_address)
+        print(port)
+        server_address = (ip_address, port)
+        clientSocket = socket(AF_INET, SOCK_DGRAM)
+        command = '/join'
+        response_timeout = 2  # Timeout for waiting for a response from the server (in seconds)
+        response_received = False
+        try:
+            # Send command to server
+            clientSocket.sendto(command.encode(), server_address)
+              # Set a timeout for receiving a response
+            clientSocket.settimeout(response_timeout)
+            try:
+                response, _ = clientSocket.recvfrom(2048)  # Buffer size is 2048 bytes
+                response_message = response.decode()
+                response_received = True
+                print(f"Response from server: {response_message}")
+                output_text.insert(tk.END, f"Received response: {response_message}\n")
+            
+            except socket.timeout:
+                # Handle timeout (no response received)
+                print("No response from server")
+                output_text.insert(tk.END, "No response from server. Please check the server address and port.\n")
+            
+            # Print the details to confirm
+            print(f"Connected to {ip_address}:{port}")
+            output_text.insert(tk.END, f"Sending command: {command}\n")
+        
+        except Exception as e:
+            # Handle errors
+            print(f"Error: {e}")
+            output_text.insert(tk.END, f"Error: {e}\n")
+    else:
+        output_text.insert(tk.END, f"Invalid command format\n")
 
 def disconnect_from_server():
     command = "/leave"
-    output_text.insert(tk.END, f"Sending command: {command}\n")
+    
+    if clientSocket and server_address:
+        try:
+            # Send the disconnect command to the server
+            clientSocket.sendto(command.encode(), server_address)
+            
+            # Print the details to confirm
+            output_text.insert(tk.END, f"Sending command: {command}\n")
+        
+        except Exception as e:
+            # Handle errors
+            print(f"Error: {e}")
+            output_text.insert(tk.END, f"Error: {e}\n")
+        
+        finally:
+            # Close the socket
+            clientSocket.close()
+            clientSocket = None
+            server_address = None
+
+            output_text.insert(tk.END, "Disconnected from server\n")
+    else:
+        output_text.insert(tk.END, "Not connected to any server\n")
 
 def register_handle():
     command = f"/register"
@@ -85,8 +151,6 @@ main_window.geometry(f"{window_width}x{window_height}+{x_position}+{y_position}"
 # Add the text entry
 send_entry = tk.Entry(main_window, width=30)
 send_entry.pack(pady=10)
-input = send_entry.get()
-
 
 send_button = tk.Button(main_window, text="Send", command = execute_command, width=15, height=2)
 send_button.pack(pady=10)
