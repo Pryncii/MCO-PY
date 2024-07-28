@@ -5,15 +5,18 @@ import socket
 from socket import *
 import time
 
-global clientSocket
-global server_address
+clientSocket = None
+server_address = None
+registeredUser = None
 
 
 def connect_to_server(input):
+    global clientSocket, server_address
+
     pattern = r'^/join (\d+\.\d+\.\d+\.\d+) (\d+)$'
     match = re.match(pattern, input)
 
-    if match:
+    if match and not clientSocket and not server_address:
         ip_address, port = match.groups()
         port = int(port)
         print(ip_address)
@@ -22,38 +25,32 @@ def connect_to_server(input):
         clientSocket = socket(AF_INET, SOCK_DGRAM)
         command = '/join'
         response_timeout = 2  # Timeout for waiting for a response from the server (in seconds)
-        response_received = False
+
         try:
-            # Send command to server
-            clientSocket.sendto(command.encode(), server_address)
-              # Set a timeout for receiving a response
-            clientSocket.settimeout(response_timeout)
+            clientSocket.sendto(command.encode(), server_address) # Send command to server
+            clientSocket.settimeout(response_timeout) # Timeout for receiving a response
             try:
                 response, _ = clientSocket.recvfrom(2048)  # Buffer size is 2048 bytes
                 response_message = response.decode()
-                response_received = True
-                update_logs(f"Received response: {response_message}\n")
+                update_logs(f"{response_message}\n")
                 print(f"Response from server: {response_message}")
             
             except socket.timeout:
                 # Handle timeout (no response received)
-                print("No response from server")
                 update_logs("No response from server. Please check the server address and port.\n")
-            
-            # Print the details to confirm
-            print(f"Connected to {ip_address}:{port}")
-            update_logs(f"Sending command: {command}\n")
         
         except Exception as e:
-            # Handle errors
-            print(f"Error: {e}")
             update_logs(f"Error: {e}\n")
+
+    elif clientSocket and server_address:
+        update_logs("Error: Already connected!\n")
     else:
-        update_logs(f"Invalid command format\n")
+        update_logs("Error: Connection to the Server has failed! Please check IP Address and Port Number.\n")
 
 def disconnect_from_server():
+    global clientSocket, server_address
+
     command = "/leave"
-    
     if clientSocket and server_address:
         try:
             # Send the disconnect command to the server
@@ -72,14 +69,27 @@ def disconnect_from_server():
             clientSocket.close()
             clientSocket = None
             server_address = None
+            registeredUser = False
 
-            update_logs("Disconnected from server\n")
+            update_logs("Connection closed. Thank you!\n")
     else:
-        update_logs("Not connected to any server\n")
+        update_logs("Error: Disconnection failed. Please connect to the server first.\n")
 
-def register_handle():
-    command = f"/register"
-    update_logs(f"Sending command: {command}\n")
+
+def register_handle(input):
+    global registeredUser
+
+    if clientSocket and server_address:
+        clientSocket.sendto(input.encode(), server_address)
+        response, _ = clientSocket.recvfrom(2048)
+        response_message = response.decode()
+        update_logs(f"{response_message}\n")
+
+        if "registered successfully" in response_message:
+            registeredUser = True
+
+    else:
+        update_logs("Error: Not connected to a server. Please connect to the server first.\n")
 
 
 def store_file():
@@ -95,6 +105,7 @@ def get_file():
 def request_dir():
     command = "/dir"
     update_logs(f"Sending command: {command}\n")
+
 
 def show_help():
     help_text = (
@@ -114,18 +125,25 @@ def execute_command():
     
     if '/join' in input_text:
         connect_to_server(input_text)
+
     elif '/leave' in input_text:
         disconnect_from_server()
+
     elif '/register' in input_text:
-        register_handle()
+        register_handle(input_text)
+
     elif '/store' in input_text:
-        store_file()
+        store_file(input_text)
+
     elif '/dir' in input_text:
         request_dir()
+
     elif '/get' in input_text:
-        get_file()
+        get_file(input_text)
+
     elif '/?' in input_text:
         show_help()
+
     else:
         update_logs("Unknown command\n")
 
@@ -136,10 +154,10 @@ def update_logs(text):
     output_text.config(state=tk.DISABLED)
 
 
-
+# ========================= GUI ========================= #
 # Create the main windoww
 main_window = tk.Tk()
-main_window.title("CSNETWK MCO")
+main_window.title("CSNETWK MCO - Client Interface")
 window_width = 600
 window_height = 350
 
@@ -154,25 +172,23 @@ y_position = (screen_height - window_height) // 2
 # Set the size and position of the main window
 main_window.geometry(f"{window_width}x{window_height}+{x_position}+{y_position}")
 
-# Set the width value for both widgets
 widget_width = 60
 
-# Create a Label and Entry widget for the command
 command_label = tk.Label(main_window, text="Command:")
 command_label.grid(row=0, column=0, padx=10, pady=10, sticky="e")
 
+# Command text field
 send_entry = tk.Entry(main_window, width=widget_width)
 send_entry.grid(row=0, column=1, padx=10, pady=10)
 
-# Create a Label for the logs
 logs_label = tk.Label(main_window, text="Logs:")
 logs_label.grid(row=1, column=0, padx=10, pady=10, sticky="ne")
 
-# Create the ScrolledText widget for output logs
+# Output logs
 output_text = scrolledtext.ScrolledText(main_window, wrap=tk.WORD, height=15, width=widget_width, state=tk.DISABLED)
 output_text.grid(row=1, column=1, padx=10, pady=10)
 
-# Create a frame to hold the buttons
+# Frame for the buttons
 button_frame = tk.Frame(main_window)
 button_frame.grid(row=2, column=1, pady=10)
 
@@ -181,8 +197,6 @@ send_button.pack(side=tk.LEFT, padx=5)
 
 exit_button = tk.Button(button_frame, text="Exit", command=main_window.quit, bg="red", fg="white", font=("Arial", 12), width=15, height=2)
 exit_button.pack(side=tk.LEFT, padx=5)
-
-
 
 # Run the Tkinter event loop
 main_window.mainloop()
