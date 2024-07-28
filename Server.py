@@ -4,7 +4,7 @@ from socket import *
 serverPort = 12345
 serverSocket = socket(AF_INET, SOCK_DGRAM)
 serverSocket.bind(('', serverPort))
-print('The server is ready to receive')
+print('Server: The server is ready to receive')
 
 try:
     while True:
@@ -12,17 +12,17 @@ try:
         
         # Decode the message
         decoded_message = message.decode()
-        print(f"Received message: {decoded_message} from {clientAddress}")
+        print(f"Server: Received message: {decoded_message} from {clientAddress}")
         
         # Process the message (e.g., validate command, respond to client)
-        response = f"Message '{decoded_message}' received"
+        response = f"Server: Message '{decoded_message}' received"
         
         # Send response back to the client
         serverSocket.sendto(response.encode(), clientAddress)
-        print(f"Sent response to {clientAddress}")
+        print(f"Server: Sent response to {clientAddress}")
 
 except KeyboardInterrupt:
-    print("\nServer shutting down")
+    print("\nServer: Server shutting down")
 
 finally:
     # Close the socket when done

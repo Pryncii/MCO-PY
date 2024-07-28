@@ -3,15 +3,16 @@ from tkinter import scrolledtext
 import re
 import socket
 from socket import *
+import time
 
 global clientSocket
 global server_address
 
 
-def connect_to_server():
-    input = send_entry.get()
+def connect_to_server(input):
     pattern = r'^/join (\d+\.\d+\.\d+\.\d+) (\d+)$'
     match = re.match(pattern, input)
+
     if match:
         ip_address, port = match.groups()
         port = int(port)
@@ -31,24 +32,24 @@ def connect_to_server():
                 response, _ = clientSocket.recvfrom(2048)  # Buffer size is 2048 bytes
                 response_message = response.decode()
                 response_received = True
+                update_logs(f"Received response: {response_message}\n")
                 print(f"Response from server: {response_message}")
-                output_text.insert(tk.END, f"Received response: {response_message}\n")
             
             except socket.timeout:
                 # Handle timeout (no response received)
                 print("No response from server")
-                output_text.insert(tk.END, "No response from server. Please check the server address and port.\n")
+                update_logs("No response from server. Please check the server address and port.\n")
             
             # Print the details to confirm
             print(f"Connected to {ip_address}:{port}")
-            output_text.insert(tk.END, f"Sending command: {command}\n")
+            update_logs(f"Sending command: {command}\n")
         
         except Exception as e:
             # Handle errors
             print(f"Error: {e}")
-            output_text.insert(tk.END, f"Error: {e}\n")
+            update_logs(f"Error: {e}\n")
     else:
-        output_text.insert(tk.END, f"Invalid command format\n")
+        update_logs(f"Invalid command format\n")
 
 def disconnect_from_server():
     command = "/leave"
@@ -59,12 +60,12 @@ def disconnect_from_server():
             clientSocket.sendto(command.encode(), server_address)
             
             # Print the details to confirm
-            output_text.insert(tk.END, f"Sending command: {command}\n")
+            update_logs(f"Sending command: {command}\n")
         
         except Exception as e:
             # Handle errors
             print(f"Error: {e}")
-            output_text.insert(tk.END, f"Error: {e}\n")
+            update_logs(f"Error: {e}\n")
         
         finally:
             # Close the socket
@@ -72,28 +73,28 @@ def disconnect_from_server():
             clientSocket = None
             server_address = None
 
-            output_text.insert(tk.END, "Disconnected from server\n")
+            update_logs("Disconnected from server\n")
     else:
-        output_text.insert(tk.END, "Not connected to any server\n")
+        update_logs("Not connected to any server\n")
 
 def register_handle():
     command = f"/register"
-    output_text.insert(tk.END, f"Sending command: {command}\n")
+    update_logs(f"Sending command: {command}\n")
 
 
 def store_file():
     command = f"/store"
-    output_text.insert(tk.END, f"Sending command: {command}\n")
+    update_logs(f"Sending command: {command}\n")
 
 
 def get_file():
     command = f"/get"
-    output_text.insert(tk.END, f"Sending command: {command}\n")
+    update_logs(f"Sending command: {command}\n")
 
 
 def request_dir():
     command = "/dir"
-    output_text.insert(tk.END, f"Sending command: {command}\n")
+    update_logs(f"Sending command: {command}\n")
 
 def show_help():
     help_text = (
@@ -105,13 +106,14 @@ def show_help():
         "/get <filename>\n"
         "/?\n"
     )
-    output_text.insert(tk.END, f"Help:\n{help_text}\n")
+    update_logs(f"Help:\n{help_text}\n")
 
 def execute_command():
     input_text = send_entry.get()
+    send_entry.delete(0, tk.END)
     
     if '/join' in input_text:
-        connect_to_server()
+        connect_to_server(input_text)
     elif '/leave' in input_text:
         disconnect_from_server()
     elif '/register' in input_text:
@@ -125,7 +127,13 @@ def execute_command():
     elif '/?' in input_text:
         show_help()
     else:
-        output_text.insert(tk.END, "Unknown command\n")
+        update_logs("Unknown command\n")
+
+def update_logs(text):
+    output_text.config(state=tk.NORMAL)
+    output_text.insert(tk.END, time.strftime("%H:%M:%S") + ": ")
+    output_text.insert(tk.END, text)
+    output_text.config(state=tk.DISABLED)
 
 
 
@@ -133,7 +141,7 @@ def execute_command():
 main_window = tk.Tk()
 main_window.title("CSNETWK MCO")
 window_width = 600
-window_height = 400
+window_height = 350
 
 # Get the screen dimensions
 screen_width = main_window.winfo_screenwidth()
@@ -146,22 +154,35 @@ y_position = (screen_height - window_height) // 2
 # Set the size and position of the main window
 main_window.geometry(f"{window_width}x{window_height}+{x_position}+{y_position}")
 
+# Set the width value for both widgets
+widget_width = 60
 
-# Create a Button widget
-# Add the text entry
-send_entry = tk.Entry(main_window, width=30)
-send_entry.pack(pady=10)
+# Create a Label and Entry widget for the command
+command_label = tk.Label(main_window, text="Command:")
+command_label.grid(row=0, column=0, padx=10, pady=10, sticky="e")
 
-send_button = tk.Button(main_window, text="Send", command = execute_command, width=15, height=2)
-send_button.pack(pady=10)
+send_entry = tk.Entry(main_window, width=widget_width)
+send_entry.grid(row=0, column=1, padx=10, pady=10)
+
+# Create a Label for the logs
+logs_label = tk.Label(main_window, text="Logs:")
+logs_label.grid(row=1, column=0, padx=10, pady=10, sticky="ne")
+
+# Create the ScrolledText widget for output logs
+output_text = scrolledtext.ScrolledText(main_window, wrap=tk.WORD, height=15, width=widget_width, state=tk.DISABLED)
+output_text.grid(row=1, column=1, padx=10, pady=10)
+
+# Create a frame to hold the buttons
+button_frame = tk.Frame(main_window)
+button_frame.grid(row=2, column=1, pady=10)
+
+send_button = tk.Button(button_frame, text="Send", command=execute_command, font=("Arial", 12), width=15, height=2)
+send_button.pack(side=tk.LEFT, padx=5)
+
+exit_button = tk.Button(button_frame, text="Exit", command=main_window.quit, bg="red", fg="white", font=("Arial", 12), width=15, height=2)
+exit_button.pack(side=tk.LEFT, padx=5)
 
 
-# Create another Button with different options
-exit_button = tk.Button(main_window, text="Exit", command=main_window.quit, bg="red", fg="white", font=("Arial", 12))
-exit_button.pack(pady=10)
-
-output_text = scrolledtext.ScrolledText(main_window, wrap=tk.WORD, height=40, width=60)
-output_text.pack(pady=10)
 
 # Run the Tkinter event loop
 main_window.mainloop()
