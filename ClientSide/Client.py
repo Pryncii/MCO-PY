@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import scrolledtext
+from tkinter import filedialog
 import re
 import socket
 from socket import *
@@ -92,9 +93,49 @@ def register_handle(input):
         update_logs("Error: Not connected to a server. Please connect to the server first.\n")
 
 
-def store_file():
-    command = f"/store"
-    update_logs(f"Sending command: {command}\n")
+def store_file(input):
+    if clientSocket and server_address and registeredUser:
+        filename = input.split(' ')[1]  # Extract the filename from the command input
+        file_path = f"./Client Files/{filename}"
+        
+        try:
+            with open(file_path, 'rb') as f:
+                file_data = f.read()
+                print(f"Read file data: {file_data}")
+                f.seek(0)
+            
+                command = f"/store {filename}"
+                clientSocket.sendto(command.encode(), server_address)
+
+                # Wait for the server to be ready
+                response, _ = clientSocket.recvfrom(2048)
+                response_message = response.decode()
+                update_logs(f"{response_message}\n")
+
+                if "Ready to receive" in response_message:
+                    while True:
+                        chunk = f.read(1024)
+
+                        print(f"inner chunk: {chunk}")
+                        if chunk:
+                            clientSocket.sendto(chunk, server_address)
+                        else:
+                            break
+                    clientSocket.sendto(b'EOF', server_address)  # Send end of file marker
+
+                    response, _ = clientSocket.recvfrom(2048)
+                    response, _ = clientSocket.recvfrom(2048) # DON'T REMOVE OTHERWISE IT WILL DESYNC
+                    response_message = response.decode()
+                    update_logs(f"{response_message}\n")
+        
+        except FileNotFoundError:
+            update_logs("File does not exist.\n")
+        
+        except Exception as e:
+            update_logs(f"Error: {e}\n")
+
+    else:
+        update_logs("Error: Not connected to a server. Please connect to the server first.\n")
 
 
 def get_file():
