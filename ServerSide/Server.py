@@ -20,11 +20,13 @@ def handle_client_message(message, client_address):
 
     if command == '/join':
         response = f"Welcome! Your address is {client_address}"
+        serverSocket.sendto(response.encode(), client_address)
     
     elif command == '/leave':
         if client_address in clients:
             del clients[client_address]
         response = "Disconnected from the server."
+        serverSocket.sendto(response.encode(), client_address)
     
     elif command == '/register':
         if len(command_parts) == 2:
@@ -38,6 +40,8 @@ def handle_client_message(message, client_address):
                 response = f"Handle {handle} registered successfully"
         else:
             response = "Invalid register command. Usage: /register <handle>"
+
+        serverSocket.sendto(response.encode(), client_address)
     
     elif command == '/store':
         if len(command_parts) == 2:
@@ -48,24 +52,51 @@ def handle_client_message(message, client_address):
 
         else:
             response = "Invalid store command. Usage: /store <filename>"
+            serverSocket.sendto(response.encode(), client_address)
     
     elif command == '/dir':
-        print("wip")
+        files = os.listdir("./Server Files")
+        if not files:
+            response = "No files found in the server."
+        else:
+            response = "Files in server:\n" + "\n".join(files)
+        serverSocket.sendto(response.encode(), client_address)
     
     elif command == '/get':
-        print("wip")
+        if len(command_parts) == 2:
+            filename = command_parts[1]
+            file_path = f"./Server Files/{filename}"
+
+            if os.path.exists(file_path):
+                response = f"Ready to send file: {filename}"
+                serverSocket.sendto(response.encode(), client_address)
+
+                with open(file_path, 'rb') as f:
+                    while True:
+                        chunk = f.read(1024)
+                        if chunk:
+                            serverSocket.sendto(chunk, client_address)
+                        else:
+                            break
+                    serverSocket.sendto(b'EOF', client_address)
+                response = f"File {filename} sent successfully."
+            else:
+                response = f"Error: File {filename} not found."
+        else:
+            response = "Invalid get command. Usage: /get <filename>"
+
+        serverSocket.sendto(response.encode(), client_address)
     
     else:
         response = "Unknown command"
+        serverSocket.sendto(response.encode(), client_address)
 
-    serverSocket.sendto(response.encode(), client_address)
 
 def handle_file_transfer(chunk, client_address):
     global file_transfers
 
-    print(chunk)
-
     if client_address in file_transfers:
+        print(f"Server chunk {chunk}")
         if chunk == b'EOF':
             filename = file_transfers[client_address]['filename']
             file_data = file_transfers[client_address]['file_data']
@@ -86,16 +117,11 @@ def handle_file_transfer(chunk, client_address):
 def start_server():
     try:
         while True:
-            try:
-                chunk, client_address = serverSocket.recvfrom(2048)
-                if client_address in file_transfers:
-                    handle_file_transfer(chunk, client_address)
-                else:
-                    threading.Thread(target=handle_client_message, args=(chunk.decode(), client_address)).start()
-            except ConnectionResetError as e:
-                print(f"Connection error with {client_address}: {e}")
-            except Exception as e:
-                print(f"Unexpected error: {e}")
+            chunk, client_address = serverSocket.recvfrom(2048)
+            if client_address in file_transfers and chunk[:5] != b'/join' and chunk[:6] != b'/leave' and chunk[:9] != b'/register' and chunk[:6] != b'/store' and chunk[:4] != b'/dir' and chunk[:4] != b'/get':
+                handle_file_transfer(chunk, client_address)
+            else:
+                threading.Thread(target=handle_client_message, args=(chunk.decode(), client_address)).start()
     except KeyboardInterrupt:
         print("\nServer: Server shutting down")
     finally:

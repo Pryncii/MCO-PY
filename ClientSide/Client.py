@@ -5,6 +5,7 @@ import re
 import socket
 from socket import *
 import time
+import os
 
 clientSocket = None
 server_address = None
@@ -78,9 +79,9 @@ def disconnect_from_server():
 
 
 def register_handle(input):
-    global registeredUser
+    global clientSocket, server_address, registeredUser
 
-    if clientSocket and server_address:
+    if clientSocket and server_address and not registeredUser:
         clientSocket.sendto(input.encode(), server_address)
         response, _ = clientSocket.recvfrom(2048)
         response_message = response.decode()
@@ -89,63 +90,123 @@ def register_handle(input):
         if "registered successfully" in response_message:
             registeredUser = True
 
+    elif registeredUser:
+        update_logs("Error: Already a registered user!\n")
     else:
         update_logs("Error: Not connected to a server. Please connect to the server first.\n")
 
 
 def store_file(input):
+    global clientSocket, server_address, registeredUser
+
     if clientSocket and server_address and registeredUser:
-        filename = input.split(' ')[1]  # Extract the filename from the command input
-        file_path = f"./Client Files/{filename}"
-        
-        try:
-            with open(file_path, 'rb') as f:
-                file_data = f.read()
-                print(f"Read file data: {file_data}")
-                f.seek(0)
+        if len(input) == 2:
+            filename = input.split(' ')[1]  # Extract the filename from the command input
+            file_path = f"./Client Files/{filename}"
             
-                command = f"/store {filename}"
-                clientSocket.sendto(command.encode(), server_address)
+            try:
+                with open(file_path, 'rb') as f:
+                    command = f"/store {filename}"
+                    clientSocket.sendto(command.encode(), server_address)
 
-                # Wait for the server to be ready
-                response, _ = clientSocket.recvfrom(2048)
-                response_message = response.decode()
-                update_logs(f"{response_message}\n")
-
-                if "Ready to receive" in response_message:
-                    while True:
-                        chunk = f.read(1024)
-
-                        print(f"inner chunk: {chunk}")
-                        if chunk:
-                            clientSocket.sendto(chunk, server_address)
-                        else:
-                            break
-                    clientSocket.sendto(b'EOF', server_address)  # Send end of file marker
-
+                    # Wait for the server to be ready
                     response, _ = clientSocket.recvfrom(2048)
-                    response, _ = clientSocket.recvfrom(2048) # DON'T REMOVE OTHERWISE IT WILL DESYNC
                     response_message = response.decode()
                     update_logs(f"{response_message}\n")
-        
-        except FileNotFoundError:
-            update_logs("File does not exist.\n")
-        
-        except Exception as e:
-            update_logs(f"Error: {e}\n")
 
+                    if "Ready to receive" in response_message:
+                        while True:
+                            chunk = f.read(1024)
+
+                            print(f"inner chunk: {chunk}\n")
+                            if chunk:
+                                clientSocket.sendto(chunk, server_address)
+                            else:
+                                break
+                        clientSocket.sendto(b'EOF', server_address)  # Send end of file marker
+
+                        time.sleep(1)
+
+                        response, _ = clientSocket.recvfrom(2048)
+                        response_message = response.decode()
+                        update_logs(f"{response_message}\n")
+            
+            except FileNotFoundError:
+                update_logs("File does not exist.\n")
+        
+            except Exception as e:
+                update_logs(f"Error: {e}\n")
+
+        else:
+            update_logs("Invalid store command. Usage: /store <filename>\n")
+
+    elif clientSocket and server_address:
+        update_logs("Error: Not registered to the server. Please register first.\n")
     else:
         update_logs("Error: Not connected to a server. Please connect to the server first.\n")
 
 
-def get_file():
-    command = f"/get"
-    update_logs(f"Sending command: {command}\n")
+def get_file(input):
+    global clientSocket, server_address, registeredUser
+
+    if clientSocket and server_address and registeredUser:
+        if len(input) == 2:
+            filename = input.split(' ')[1]  # Extract the filename from the command input
+            command = f"/get {filename}"
+            clientSocket.sendto(command.encode(), server_address)
+
+            try:
+                response, _ = clientSocket.recvfrom(2048)
+                response_message = response.decode()
+                update_logs(f"{response_message}\n")
+
+                if "Ready to send file" in response_message:
+                    file_path = f"./Client Files/{filename}"
+                    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+                    file_data = b''
+                    with open(file_path, 'wb') as f:
+                        while True:
+                            chunk, _ = clientSocket.recvfrom(2048)
+
+                            if chunk == b'EOF':
+                                f.write(file_data)
+                                response, _ = clientSocket.recvfrom(2048)
+                                response_message = response.decode()
+                                update_logs(f"{response_message}\n")
+                                break
+                            else:
+                                file_data += chunk
+            
+            except Exception as e:
+                update_logs(f"Error in get_file function: {e}\n")
+        else:
+            update_logs("Invalid get command. Usage: /get <filename>\n")
+
+    elif clientSocket and server_address:
+        update_logs("Error: Not registered to the server. Please register first.\n")
+    else:
+        update_logs("Error: Not connected to a server. Please connect to the server first.\n")
 
 
 def request_dir():
-    command = "/dir"
-    update_logs(f"Sending command: {command}\n")
+    global clientSocket, server_address, registeredUser
+
+    if clientSocket and server_address and registeredUser:
+        command = "/dir"
+        clientSocket.sendto(command.encode(), server_address)
+        
+        try:
+            response, _ = clientSocket.recvfrom(2048)
+            response_message = response.decode()
+            update_logs(f"{response_message}\n")
+        except Exception as e:
+            update_logs(f"Error: {e}\n")
+
+    elif clientSocket and server_address:
+        update_logs("Error: Not registered to the server. Please register first.\n")
+    else:
+        update_logs("Error: Not connected to a server. Please connect to the server first.\n")
 
 
 def show_help():
