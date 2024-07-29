@@ -21,6 +21,20 @@ def handle_client_message(message, client_address):
     if command == '/join':
         response = f"Welcome! Your address is {client_address}"
         serverSocket.sendto(response.encode(), client_address)
+    elif command == '/msg':
+        parts = message.strip().split(' ', 2)
+        print(parts)
+        handle = parts[1]
+        if(handle in clients):
+            response = f"Message sent to {handle}"
+            serverSocket.sendto(response.encode(), client_address)
+    elif command == '/broadcast':
+        parts = message.strip().split(' ', 2)
+        print(parts)
+        handle = parts[1]
+        if(handle in clients):
+            response = f"Message sent to {handle}"
+            serverSocket.sendto(response.encode(), client_address)
     
     elif command == '/leave':
         if client_address in clients:

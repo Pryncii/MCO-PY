@@ -218,10 +218,40 @@ def show_help():
         "/dir\n"
         "/get <filename>\n"
         "/?\n"
+        "/msg <userhandle> <Message>"
+        "/broadcast <Message>"
     )
     update_logs(f"Help:\n{help_text}\n")
 
-def execute_command():
+def send_msg(input):
+    global clientSocket, server_address, registeredUser
+
+    if clientSocket and server_address and registeredUser:
+        clientSocket.sendto(input.encode(), server_address)
+        response, _ = clientSocket.recvfrom(2048)
+        response_message = response.decode()
+        update_logs(f"{response_message}\n")
+    elif clientSocket and server_address:
+        update_logs("Error: Not registered to the server. Please register first.\n")
+    else:
+        update_logs("Error: Not connected to a server. Please connect to the server first.\n")
+
+def send_broadcast():
+    global clientSocket, server_address, registeredUser
+
+    if clientSocket and server_address and registeredUser:
+        clientSocket.sendto(input.encode(), server_address)
+        response, _ = clientSocket.recvfrom(2048)
+        response_message = response.decode()
+        update_logs(f"{response_message}\n")
+    elif clientSocket and server_address:
+        update_logs("Error: Not registered to the server. Please register first.\n")
+    else:
+        update_logs("Error: Not connected to a server. Please connect to the server first.\n")
+    pass
+
+
+def execute_command(event = None):
     input_text = send_entry.get()
     send_entry.delete(0, tk.END)
     
@@ -245,6 +275,9 @@ def execute_command():
 
     elif '/?' in input_text:
         show_help()
+
+    elif '/msg' in input_text:
+        send_msg(input_text)
 
     else:
         update_logs("Unknown command\n")
@@ -296,6 +329,7 @@ button_frame.grid(row=2, column=1, pady=10)
 
 send_button = tk.Button(button_frame, text="Send", command=execute_command, font=("Arial", 12), width=15, height=2)
 send_button.pack(side=tk.LEFT, padx=5)
+main_window.bind('<Return>', execute_command)
 
 exit_button = tk.Button(button_frame, text="Exit", command=main_window.quit, bg="red", fg="white", font=("Arial", 12), width=15, height=2)
 exit_button.pack(side=tk.LEFT, padx=5)
