@@ -21,20 +21,43 @@ def handle_client_message(message, client_address):
     if command == '/join':
         response = f"Welcome! Your address is {client_address}"
         serverSocket.sendto(response.encode(), client_address)
+
     elif command == '/msg':
         parts = message.strip().split(' ', 2)
         print(parts)
+        print(clients)
         handle = parts[1]
-        if(handle in clients):
-            response = f"Message sent to {handle}"
-            serverSocket.sendto(response.encode(), client_address)
+        msg = parts[2]
+        sender = clients[client_address]
+        response1 = f"Message '{msg}' sent to {handle}"
+         # Find the address of the recipient
+        recipient_address = None
+        for addr, name in clients.items():
+            if name == handle:
+                recipient_address = addr
+                break
+        if recipient_address:
+            response = f"{sender}: {msg}"
+            serverSocket.sendto(response.encode(), recipient_address)
+        
+        serverSocket.sendto(response1.encode(), client_address)
+
+
     elif command == '/broadcast':
-        parts = message.strip().split(' ', 2)
+        parts = message.strip().split(' ', 1)
         print(parts)
-        handle = parts[1]
-        if(handle in clients):
-            response = f"Message sent to {handle}"
-            serverSocket.sendto(response.encode(), client_address)
+        print(clients)
+        msg = parts[1]
+        sender = clients[client_address]
+        response1 = f"Message '{msg}' broadcasted"
+         # Find the address of the recipient
+        for addr, name in clients.items():
+            if addr != client_address:
+                response = f"{sender}: {msg}"
+                serverSocket.sendto(response.encode(), addr)
+        
+        serverSocket.sendto(response1.encode(), client_address)
+
     
     elif command == '/leave':
         if client_address in clients:

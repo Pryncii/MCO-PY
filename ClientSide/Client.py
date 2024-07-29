@@ -6,6 +6,8 @@ import socket
 from socket import *
 import time
 import os
+import threading
+import random
 
 clientSocket = None
 server_address = None
@@ -236,7 +238,7 @@ def send_msg(input):
     else:
         update_logs("Error: Not connected to a server. Please connect to the server first.\n")
 
-def send_broadcast():
+def send_broadcast(input):
     global clientSocket, server_address, registeredUser
 
     if clientSocket and server_address and registeredUser:
@@ -248,7 +250,16 @@ def send_broadcast():
         update_logs("Error: Not registered to the server. Please register first.\n")
     else:
         update_logs("Error: Not connected to a server. Please connect to the server first.\n")
-    pass
+
+def receive_messages():
+    while True:
+        try:
+            response, _ = clientSocket.recvfrom(2048)
+            response_message = response.decode()
+            update_logs(f"{response_message}\n")
+        except Exception as e:
+            time.sleep(0.6)
+            pass
 
 
 def execute_command(event = None):
@@ -279,6 +290,9 @@ def execute_command(event = None):
     elif '/msg' in input_text:
         send_msg(input_text)
 
+    elif '/broadcast' in input_text:
+        send_broadcast(input_text)
+
     else:
         update_logs("Unknown command\n")
 
@@ -292,6 +306,7 @@ def update_logs(text):
 # ========================= GUI ========================= #
 # Create the main windoww
 main_window = tk.Tk()
+main_window.configure(bg="#{:02x}{:02x}{:02x}".format(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
 main_window.title("CSNETWK MCO - Client Interface")
 window_width = 600
 window_height = 350
@@ -333,6 +348,9 @@ main_window.bind('<Return>', execute_command)
 
 exit_button = tk.Button(button_frame, text="Exit", command=main_window.quit, bg="red", fg="white", font=("Arial", 12), width=15, height=2)
 exit_button.pack(side=tk.LEFT, padx=5)
+
+receive_thread = threading.Thread(target=receive_messages, daemon=True)
+receive_thread.start()
 
 # Run the Tkinter event loop
 main_window.mainloop()
