@@ -21,8 +21,8 @@ def connect_to_server(input):
     if match and not clientSocket and not server_address:
         ip_address, port = match.groups()
         port = int(port)
-        print(ip_address)
-        print(port)
+        #print(ip_address)
+        #print(port)
         server_address = (ip_address, port)
         clientSocket = socket(AF_INET, SOCK_DGRAM)
         command = '/join'
@@ -35,7 +35,7 @@ def connect_to_server(input):
                 response, _ = clientSocket.recvfrom(2048)  # Buffer size is 2048 bytes
                 response_message = response.decode()
                 update_logs(f"{response_message}\n")
-                print(f"Response from server: {response_message}")
+                #print(f"Response from server: {response_message}")
             
             except socket.timeout:
                 # Handle timeout (no response received)
@@ -63,7 +63,7 @@ def disconnect_from_server():
         
         except Exception as e:
             # Handle errors
-            print(f"Error: {e}")
+            #print(f"Error: {e}")
             update_logs(f"Error: {e}\n")
         
         finally:
@@ -118,7 +118,7 @@ def store_file(input):
                         while True:
                             chunk = f.read(1024)
 
-                            print(f"inner chunk: {chunk}\n")
+                            #print(f"inner chunk: {chunk}\n")
                             if chunk:
                                 clientSocket.sendto(chunk, server_address)
                             else:

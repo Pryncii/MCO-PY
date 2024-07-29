@@ -96,7 +96,7 @@ def handle_file_transfer(chunk, client_address):
     global file_transfers
 
     if client_address in file_transfers:
-        print(f"Server chunk {chunk}")
+        # print(f"Server chunk {chunk}")
         if chunk == b'EOF':
             filename = file_transfers[client_address]['filename']
             file_data = file_transfers[client_address]['file_data']
