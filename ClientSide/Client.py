@@ -100,7 +100,7 @@ def store_file(input):
     global clientSocket, server_address, registeredUser
 
     if clientSocket and server_address and registeredUser:
-        if len(input) == 2:
+        if len(input.split()) == 2:
             filename = input.split(' ')[1]  # Extract the filename from the command input
             file_path = f"./Client Files/{filename}"
             
@@ -150,7 +150,7 @@ def get_file(input):
     global clientSocket, server_address, registeredUser
 
     if clientSocket and server_address and registeredUser:
-        if len(input) == 2:
+        if len(input.split()) == 2:
             filename = input.split(' ')[1]  # Extract the filename from the command input
             command = f"/get {filename}"
             clientSocket.sendto(command.encode(), server_address)

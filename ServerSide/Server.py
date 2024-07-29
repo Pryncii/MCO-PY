@@ -24,8 +24,8 @@ def handle_client_message(message, client_address):
     
     elif command == '/leave':
         if client_address in clients:
+            response = f"{clients[client_address]}: Disconnected from the server."
             del clients[client_address]
-        response = "Disconnected from the server."
         serverSocket.sendto(response.encode(), client_address)
     
     elif command == '/register':
@@ -79,7 +79,7 @@ def handle_client_message(message, client_address):
                         else:
                             break
                     serverSocket.sendto(b'EOF', client_address)
-                response = f"File {filename} sent successfully."
+                response = f"{clients[client_address]}: File {filename} sent successfully."
             else:
                 response = f"Error: File {filename} not found."
         else:
@@ -104,7 +104,7 @@ def handle_file_transfer(chunk, client_address):
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
             with open(file_path, 'wb') as f:
                 f.write(file_data)
-            response = f"File {filename} stored successfully."
+            response = f"{clients[client_address]}: File {filename} stored successfully."
             serverSocket.sendto(response.encode(), client_address)
             del file_transfers[client_address]
         else:
