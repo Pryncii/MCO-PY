@@ -28,7 +28,7 @@ def connect_to_server(input):
         server_address = (ip_address, port)
         clientSocket = socket(AF_INET, SOCK_DGRAM)
         command = '/join'
-        response_timeout = 2  # Timeout for waiting for a response from the server (in seconds)
+        response_timeout = 5  # Timeout for waiting for a response from the server (in seconds)
 
         try:
             clientSocket.sendto(command.encode(), server_address) # Send command to server
@@ -222,6 +222,7 @@ def show_help():
         "/?\n"
         "/msg <userhandle> <Message>"
         "/broadcast <Message>"
+        "/viewmsg"
     )
     update_logs(f"Help:\n{help_text}\n")
 
@@ -230,6 +231,20 @@ def send_msg(input):
 
     if clientSocket and server_address and registeredUser:
         clientSocket.sendto(input.encode(), server_address)
+        response, _ = clientSocket.recvfrom(2048)
+        response_message = response.decode()
+        update_logs(f"{response_message}\n")
+    elif clientSocket and server_address:
+        update_logs("Error: Not registered to the server. Please register first.\n")
+    else:
+        update_logs("Error: Not connected to a server. Please connect to the server first.\n")
+
+def view_msg():
+    global clientSocket, server_address, registeredUser
+    command = "/viewmsg"
+
+    if clientSocket and server_address and registeredUser:
+        clientSocket.sendto(command.encode(), server_address)
         response, _ = clientSocket.recvfrom(2048)
         response_message = response.decode()
         update_logs(f"{response_message}\n")
@@ -251,15 +266,6 @@ def send_broadcast(input):
     else:
         update_logs("Error: Not connected to a server. Please connect to the server first.\n")
 
-def receive_messages():
-    while True:
-        try:
-            response, _ = clientSocket.recvfrom(2048)
-            response_message = response.decode()
-            update_logs(f"{response_message}\n")
-        except Exception as e:
-            time.sleep(0.6)
-            pass
 
 
 def execute_command(event = None):
@@ -292,6 +298,9 @@ def execute_command(event = None):
 
     elif '/broadcast' in input_text:
         send_broadcast(input_text)
+    
+    elif '/viewmsg' in input_text:
+        view_msg()
 
     else:
         update_logs("Unknown command\n")
@@ -349,8 +358,6 @@ main_window.bind('<Return>', execute_command)
 exit_button = tk.Button(button_frame, text="Exit", command=main_window.quit, bg="red", fg="white", font=("Arial", 12), width=15, height=2)
 exit_button.pack(side=tk.LEFT, padx=5)
 
-receive_thread = threading.Thread(target=receive_messages, daemon=True)
-receive_thread.start()
 
 # Run the Tkinter event loop
 main_window.mainloop()

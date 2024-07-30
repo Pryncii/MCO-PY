@@ -9,6 +9,7 @@ serverSocket.bind(('', serverPort))
 print('Server: The server is ready to receive')
 
 clients = {}
+messages = {}
 file_transfers = {}  # To track ongoing file transfers
 
 
@@ -36,12 +37,18 @@ def handle_client_message(message, client_address):
             if name == handle:
                 recipient_address = addr
                 break
+
         if recipient_address:
             response = f"{sender}: {msg}"
-            serverSocket.sendto(response.encode(), recipient_address)
+            messages[recipient_address].append(response)
         
         serverSocket.sendto(response1.encode(), client_address)
 
+    elif command == '/viewmsg':
+        
+        # Join all messages into a single string for the client
+        response = "\n".join(messages[client_address])
+        serverSocket.sendto(response.encode(), client_address)
 
     elif command == '/broadcast':
         parts = message.strip().split(' ', 1)
@@ -53,8 +60,8 @@ def handle_client_message(message, client_address):
          # Find the address of the recipient
         for addr, name in clients.items():
             if addr != client_address:
-                response = f"{sender}: {msg}"
-                serverSocket.sendto(response.encode(), addr)
+                response = f"{sender}(broadcast): {msg}"
+                messages[addr].append(response)
         
         serverSocket.sendto(response1.encode(), client_address)
 
@@ -74,6 +81,8 @@ def handle_client_message(message, client_address):
             
             else:
                 clients[client_address] = handle
+                messages[client_address] = []
+                messages[client_address].append("Message Log: \n")
                 response = f"Handle {handle} registered successfully"
         else:
             response = "Invalid register command. Usage: /register <handle>"
