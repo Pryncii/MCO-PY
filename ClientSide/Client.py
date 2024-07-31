@@ -23,22 +23,21 @@ def connect_to_server(input):
     if match and not clientSocket and not server_address:
         ip_address, port = match.groups()
         port = int(port)
-        #print(ip_address)
-        #print(port)
         server_address = (ip_address, port)
         clientSocket = socket(AF_INET, SOCK_DGRAM)
-        command = '/join'
         response_timeout = 5  # Timeout for waiting for a response from the server (in seconds)
 
         try:
-            clientSocket.sendto(command.encode(), server_address) # Send command to server
+            clientSocket.sendto(input.encode(), server_address) # Send command to server
             clientSocket.settimeout(response_timeout) # Timeout for receiving a response
             try:
                 response, _ = clientSocket.recvfrom(2048)  # Buffer size is 2048 bytes
                 response_message = response.decode()
                 update_logs(f"{response_message}\n")
                 #print(f"Response from server: {response_message}")
-            
+                if "Error" in response_message:
+                    clientSocket.close()
+                    clientSocket = None
             except socket.timeout:
                 # Handle timeout (no response received)
                 update_logs("No response from server. Please check the server address and port.\n")
@@ -220,9 +219,9 @@ def show_help():
         "/dir\n"
         "/get <filename>\n"
         "/?\n"
-        "/msg <userhandle> <Message>"
-        "/broadcast <Message>"
-        "/viewmsg"
+        "/msg <userhandle> <Message>\n"
+        "/broadcast <Message>\n"
+        "/viewmsg\n"
     )
     update_logs(f"Help:\n{help_text}\n")
 

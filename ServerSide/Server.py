@@ -4,6 +4,7 @@ import os
 
 # Define server port and create UDP socket
 serverPort = 12345
+serverIP = '127.0.0.1'
 serverSocket = socket(AF_INET, SOCK_DGRAM)
 serverSocket.bind(('', serverPort))
 print('Server: The server is ready to receive')
@@ -18,9 +19,15 @@ def handle_client_message(message, client_address):
 
     command_parts = message.strip().split()
     command = command_parts[0]
+    IP = command_parts[1]
+    port = int(command_parts[2])
 
     if command == '/join':
-        response = f"Welcome! Your address is {client_address}"
+        if port == serverPort and IP == serverIP:
+            response = f"Welcome! Your address is {client_address}"
+        else:
+            response = f"Error: Connection to the Server has failed! Please check IP Address and Port Number."
+            
         serverSocket.sendto(response.encode(), client_address)
 
     elif command == '/msg':
