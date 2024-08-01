@@ -11,7 +11,7 @@ import random
 
 clientSocket = None
 server_address = None
-registeredUser = None
+registeredUser = False
 
 
 def connect_to_server(input):
@@ -19,8 +19,8 @@ def connect_to_server(input):
 
     pattern = r'^/join (\d+\.\d+\.\d+\.\d+) (\d+)$'
     match = re.match(pattern, input)
-
-    if match and not clientSocket and not server_address:
+    command_parts = input.strip().split()
+    if match and not clientSocket and not server_address and len(command_parts) == 3:
         ip_address, port = match.groups()
         port = int(port)
         server_address = (ip_address, port)
@@ -77,7 +77,7 @@ def disconnect_from_server():
             clientSocket.close()
             clientSocket = None
             server_address = None
-            registeredUser = False
+            registeredUser = None
 
             update_logs("Connection closed. Thank you!\n")
     else:

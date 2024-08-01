@@ -19,10 +19,10 @@ def handle_client_message(message, client_address):
 
     command_parts = message.strip().split()
     command = command_parts[0]
-    IP = command_parts[1]
-    port = int(command_parts[2])
 
     if command == '/join':
+        IP = command_parts[1]
+        port = int(command_parts[2])
         if port == serverPort and IP == serverIP:
             response = f"Welcome! Your address is {client_address}"
         else:
@@ -77,7 +77,7 @@ def handle_client_message(message, client_address):
         if client_address in clients:
             response = f"{clients[client_address]}: Disconnected from the server."
             del clients[client_address]
-        serverSocket.sendto(response.encode(), client_address)
+            serverSocket.sendto(response.encode(), client_address)
     
     elif command == '/register':
         if len(command_parts) == 2:
