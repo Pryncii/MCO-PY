@@ -38,12 +38,17 @@ def connect_to_server(input):
                 if "Error" in response_message:
                     clientSocket.close()
                     clientSocket = None
+                    server_address = None
             except socket.timeout:
                 # Handle timeout (no response received)
                 update_logs("No response from server. Please check the server address and port.\n")
         
         except Exception as e:
-            update_logs(f"Error: {e}\n")
+            update_logs("Error: Connection to the Server has failed! Please check IP Address and Port Number.\n")
+            if clientSocket:
+                clientSocket.close()
+                clientSocket = None
+                server_address = None
 
     elif clientSocket and server_address:
         update_logs("Error: Already connected!\n")
